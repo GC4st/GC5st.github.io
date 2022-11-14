@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      canvas {
+        background-image: url("./img/dasar.png");
+        height: 740px;
+         overflow: hidden; 
+        margin: center;
+        
+
+        /* background-color: #f1f1f1; */
+      }
+
+      body {
+        background-color: black;
+        overflow: hidden;
+        /* cursor: none; */
+      }
+      button {
+        padding: 5px 12px;
+      }
+      .bungkus {
+        display: grid;
+        place-items: center;
+        height: 100vh;
+      }
+    </style>
+    <title>Game</title>
+  </head>
+  <body>
+    <div class="bungkus"><button onclick="startGame()" id="btn">START</button></div>
+    <script>
+      var myGamePiece;
+      var myBackground;
+      var myObstacle = [];
+      var myScore;
+
+      //komponen dalam game
+      function startGame() {
+        myGamePiece = new component(
+          100,
+          190,
+          "./img/karakter.png",
+          200,
+          360,
+          "image"
+        );
+        myBackground = new component(
+          1340,
+          740,
+          "./img/bgsiang.png",
+          0,
+          0,
+          "background"
+        );
+        myScore = new component(
+          "30px",
+          "Consolas", 
+          "black",
+          180,
+          40,
+          "text"
+          );
+        myGameArea.start();
+      }
+
+      //fungsi dalam game
+      var myGameArea = {
+        canvas: document.createElement("canvas"),
+        start: function () {
+          this.canvas.width = 1340;
+          this.canvas.height = 740;
+          this.context = this.canvas.getContext("2d");
+          document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+          this.frameNo = 0;
+          this.interval = setInterval(updateGameArea, 20);
+          window.addEventListener("keydown", function (e) {
+            myGameArea.key = e.keyCode;
+            return true
+          });
+          window.addEventListener("keyup", function (e) {
+            myGameArea.key = false;
+            // myGamePiece.gravity = 4.8;
+          });
+        },
+        clear: function () {
+          this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        },
+        stop: function () {
+          clearInterval(this.interval);
+          alert("press f5 to restart")
+        },
+      };
+
+      //fungsi komponen dalam game
+      function component(width, height, color, x, y, type) {
+        this.type = type;
+        if (type == "image" || type == "background") {
+          this.image = new Image();
+          this.image.src = color;
+        }
+        this.width = width;
+        this.height = height;
+        this.speedX = 0;
+        this.speedY = 0;
+        this.x = x;
+        this.y = y;
+        this.gravity = 0;
+        this.gravitySpeed = 0;
+        this.update = function () {
+          ctx = myGameArea.context;
+          if (type == "image" || type == "background") {
+            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+            if (type == "background") {
+              ctx.drawImage(
+                this.image,
+                this.x + this.width,
+                this.y,
+                this.width,
+                this.height
+              );
+            }
+          }else if (this.type == "text") {
+      ctx.font = this.width + " " + this.height;
+      ctx.fillStyle = color;
+      ctx.fillText(this.text, this.x, this.y);
+    }
+           else {
+            ctx.fillStyle = color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+          }
+        };
+
+        //gravitasi
+        this.newPos = function () {
+          this.gravitySpeed += this.gravity;
+          this.x += this.speedX;
+          this.y += this.speedY + this.gravitySpeed;
+          this.hitBottom();
+          this.hitTop();
+          if (this.type == "background") {
+            if (this.x == -this.width) {
+              this.x = 0;
+            }
+          }
+        };
+        //batas tanah dan batas lompat
+        this.hitBottom = function () {
+          var rockbottom = myGameArea.canvas.height - 390;
+          if (this.y > rockbottom) {
+            this.y = rockbottom;
+            this.gravitySpeed = 0;
+          }
+
+          this.hitTop = function () {
+            let objTop = 350 - this.height;
+            if (this.y < objTop) {
+            //   this.y = objTop;
+              this.gravitySpeed = 6.8;
+              myGamePiece.gravity = 4.8;
+              
+            }
+          };
+        };
+        //fungsi tabrak obstacle
+        this.crashWith = function (otherobj) {
+          var myleft = this.x;
+          var myright = this.x + this.width;
+          var mytop = this.y;
+          var mybottom = this.y + this.height;
+          var otherleft = otherobj.x;
+          var otherright = otherobj.x + otherobj.width;
+          var othertop = otherobj.y;
+          var otherbottom = otherobj.y + otherobj.height;
+          var crash = true;
+          if (
+            mybottom < othertop ||
+            mytop > otherbottom ||
+            myright < otherleft ||
+            myleft > otherright
+          ) {
+            crash = false;
+            
+          }
+          return crash;
+        };
+      }
+
+
+      //fungsi yang menjalankan game
+      function updateGameArea() {
+        var x, y;
+        for (i = 0; i < myObstacle.length; i += 1) {
+          if (myGamePiece.crashWith(myObstacle[i])) {
+            myGameArea.stop();
+            return;
+          }
+        }
+        myGameArea.clear();
+        myGameArea.frameNo += 1;
+        if (myGameArea.frameNo == 1 || everyinterval(70)) {
+          x = myGameArea.canvas.width;
+          y = myGameArea.canvas.height - 200;
+          myObstacle.push(
+            new component(120, 120, "./img/obstacle.png", 1276, 426, "image")
+          );
+        }
+        myBackground.speedX = -10;
+        myBackground.newPos();
+        myBackground.update();
+        for (i = 0; i < myObstacle.length; i += 1) {
+          myObstacle[i].x += -25;
+          myObstacle[i].update();
+        }
+        myGamePiece.speedX = 0;
+        myGamePiece.speedY = 0;
+        if (myGameArea.key && myGameArea.key == 32) {
+          myGamePiece.gravity = -4;
+        }
+        myScore.text = "SCORE: " + myGameArea.frameNo;
+        myScore.update();
+        myGamePiece.newPos();
+        myGamePiece.update();
+      }
+
+      function everyinterval(n) {
+        if ((myGameArea.frameNo / n) % 1 == 0) {
+          return true;
+        }
+        return false;
+      }
+    </script>
+  </body>
+</html>
